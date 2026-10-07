@@ -12,7 +12,6 @@ function excludeUnusedLibs(): Plugin {
     'express',
     'dotenv',
     'react-icons',
-    'react-select',
   ];
 
   return {

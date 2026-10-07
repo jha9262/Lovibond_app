@@ -47,6 +47,7 @@ export const authService = {
         );
 
         const username = data.user || data.USER || data.USER_ID || data.userId || credentials.USER_ID;
+        const displayName = String(data.USER_NAME || data.user_name || data.userName || data.NAME || '').trim();
         let role = String(data.ROLE || data.role || data.USER_ROLE || '').trim().toUpperCase();
 
         // If role was not returned directly in /LOGIN response, look up from /USER_CONFIGURATION
@@ -77,6 +78,7 @@ export const authService = {
           success: isSuccess,
           message: data.message || data.MESSAGE || (isSuccess ? 'Login successful' : 'Invalid User ID or Password'),
           USER_ID: username,
+          USER_NAME: displayName || username,
           ROLE: role,
         };
       }
@@ -105,6 +107,7 @@ export const authService = {
         success: true,
         message: 'Login successful',
         USER_ID: credentials.USER_ID,
+        USER_NAME: credentials.USER_ID,
         ROLE: fallbackRole,
       };
     } catch (error: any) {

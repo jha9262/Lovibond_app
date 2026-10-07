@@ -5,13 +5,15 @@ import HomeSidebar from '../components/Home/HomeSidebar';
 import { userService } from '../services/userService';
 import { User, PaginationInfo } from '../types';
 
+const PAGE_SIZE = 5;
+
 const UsersPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded }) => {
   const [users, setUsers] = useState<User[]>([]);
-  const [userPagination, setUserPagination] = useState<PaginationInfo>({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [userPagination, setUserPagination] = useState<PaginationInfo>({ page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 });
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userError, setUserError] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const userRequestRef = useRef({ page: 1, limit: 10, search: '' });
+  const userRequestRef = useRef({ page: 1, limit: PAGE_SIZE, search: '' });
 
   const loadUsers = useCallback(async (params = {}) => {
     const request = { ...userRequestRef.current, ...params };

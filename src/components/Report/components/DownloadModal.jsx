@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
-import deviceService from '../../../services/deviceService.ts';
 import toast from 'react-hot-toast';
 import { X, Loader2, Pencil } from 'lucide-react';
 import Button from '../../ui/Button';
-import PrintableReport from '../../../reports/PrintableReport';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import deviceService from '../../../services/deviceService.ts';
+import { generateAndDownloadPdf } from '../../../reports/generatePdf';
 
 const DownloadModal = ({ isOpen, onClose, filePath, fileName, fileDate }) => {
   const [editableFileName, setEditableFileName] = useState(
@@ -43,7 +40,7 @@ const DownloadModal = ({ isOpen, onClose, filePath, fileName, fileDate }) => {
       const baseFileName = editableFileName.trim() || (fileName ? fileName.replace(/\.[^/.]+$/, "") : "") || `batch_${Date.now()}`;
       const originalSampleId = fileName ? fileName.replace(/\.[^/.]+$/, "") : baseFileName;
 
-      // Step 1: Fetch report data from the API
+      // Step 1: Fetch report data from the device API
       let json;
       try {
         json = await deviceService.get(`/REPORT_DOWNLOAD`, { params: { ID: originalSampleId } });
@@ -72,96 +69,12 @@ const DownloadModal = ({ isOpen, onClose, filePath, fileName, fileDate }) => {
         return;
       }
 
-      setDownloadProgress('Rendering report...');
-
-      // Step 2: Create a hidden off-screen container and render PrintableReport into it
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '0';
-      container.style.top = '0';
-      container.style.width = '210mm';
-      container.style.minHeight = '297mm';
-      container.style.zIndex = '-9999';
-      container.style.pointerEvents = 'none';
-      container.style.opacity = '0.01'; // Measurable by html2canvas without visual flash
-      container.style.background = '#ffffff';
-      document.body.appendChild(container);
-
-      // Use createRoot to render the PrintableReport
-      const root = createRoot(container);
-      await new Promise((resolve) => {
-        root.render(<PrintableReport data={data} />);
-        // Give React time to render
-        setTimeout(resolve, 600);
-      });
-
-      const reportElement = container.querySelector('#printable-report');
-      if (!reportElement) {
-        throw new Error("Report layout failed to render");
-      }
-
+      // Step 2: Generate real searchable PDF using @react-pdf/renderer
       setDownloadProgress('Generating PDF...');
-
-      // Step 3: Use html2canvas to capture the rendered report
-      const canvas = await html2canvas(reportElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      // Step 4: Create PDF using jsPDF (resolving constructor safely)
-      const PDFDoc = typeof jsPDF === 'function' ? jsPDF : (jsPDF?.jsPDF || jsPDF?.default);
-      if (!PDFDoc) {
-        throw new Error("PDF generator library could not be loaded");
-      }
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
-
-      const pdf = new PDFDoc({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      // Calculate the aspect ratio to fit the report on the page
-      const canvasAspectRatio = canvas.width / canvas.height;
-      const pageAspectRatio = pdfWidth / pdfHeight;
-
-      let imgWidth, imgHeight;
-      if (canvasAspectRatio > pageAspectRatio) {
-        // Canvas is wider relative to page
-        imgWidth = pdfWidth;
-        imgHeight = pdfWidth / canvasAspectRatio;
-      } else {
-        // Canvas is taller relative to page
-        imgHeight = pdfHeight;
-        imgWidth = pdfHeight * canvasAspectRatio;
-      }
-
-      // Center the image on the page
-      const xOffset = (pdfWidth - imgWidth) / 2;
-      const yOffset = 0;
-
-      pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
-
-      // Step 5: Save the PDF
-      const pdfFileName = baseFileName.endsWith('.pdf') ? baseFileName : `${baseFileName}.pdf`;
-      pdf.save(pdfFileName);
+      await generateAndDownloadPdf(data, baseFileName);
 
       setDownloadProgress('');
       toast.success("PDF Downloaded successfully!");
-
-      // Cleanup
-      try {
-        root.unmount();
-        document.body.removeChild(container);
-      } catch (cleanupErr) {
-        console.warn("Cleanup warning:", cleanupErr);
-      }
       onClose();
     } catch (error) {
       console.error("PDF generation failed:", error);

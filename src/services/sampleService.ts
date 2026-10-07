@@ -4,6 +4,19 @@ import { Sample, PaginatedResponse } from '../types';
 
 const API_URL = API_BASE_URL;
 
+const toDeviceDateTime = (value: string | undefined, dateSeparator: '/' | '-') => {
+  if (!value) return '';
+  const match = value.match(/^(\d{4})[/-](\d{2})[/-](\d{2})[-T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (match) {
+    return `${match[1]}${dateSeparator}${match[2]}${dateSeparator}${match[3]}-${match[4]}:${match[5]}:${match[6] || '00'}`;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}${dateSeparator}${pad(date.getMonth() + 1)}${dateSeparator}${pad(date.getDate())}-${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 10000,
@@ -20,11 +33,16 @@ const normaliseSample = (sample: any, key: string = ''): Sample | null => {
     sampleType: String(sample.sampleType ?? sample.SAMPLE_TYPE ?? sample.sample_type ?? sample.type ?? ''),
     source: String(sample.source ?? sample.SOURCE ?? sample.SAMPLE_SOURCE ?? ''),
     mainSource: String(sample.mainSource ?? sample.MAIN_SOURCE ?? ''),
-    customer: String(sample.customer ?? sample.CUSTOMER ?? ''),
+    customer: String(sample.customer ?? sample.CUSTOMER_NAME ?? sample.CUSTOMER ?? ''),
+    customerAddress: String(sample.customerAddress ?? sample.CUSTOMER_ADDRESS ?? ''),
     habitation: String(sample.habitation ?? sample.HABITATION ?? sample.SAMPLE_HABITATION ?? ''),
     district: String(sample.district ?? sample.DISTRICT ?? sample.SAMPLE_DISTRICT ?? sample.SAMPLE_TEST_DISTRICT ?? ''),
-    sampleDateOfIssue: String(sample.sampleDateOfIssue ?? sample.SAMPLE_DATE_OF_ISSUE ?? ''),
-    sampleSubmittedDate: String(sample.sampleSubmittedDate ?? sample.SAMPLE_SUBMITTED_DATE ?? ''),
+    sampleDateOfIssue: String(sample.sampleDateOfIssue ?? sample.DATE_OF_ISSUE ?? sample.SAMPLE_DATE_OF_ISSUE ?? ''),
+    sampleSubmittedDate: String(sample.sampleSubmittedDate ?? sample.SUBMITTED_DATE ?? sample.SAMPLE_SUBMITTED_DATE ?? ''),
+    sampleSubmittedBy: String(sample.sampleSubmittedBy ?? sample.SUBMITTED_BY ?? sample.SAMPLE_SUBMITTED_BY ?? ''),
+    customerReferenceNo: String(sample.customerReferenceNo ?? sample.CUSTOMER_REF_NO ?? sample.CUSTOMER_REFERENCE_NO ?? ''),
+    sampleReceiptDate: String(sample.sampleReceiptDate ?? sample.SAMPLE_RECEIPT_DATE ?? ''),
+    testReportNo: String(sample.testReportNo ?? sample.TEST_REPORT_NO ?? ''),
     endDate: String(sample.endDate ?? sample.END_DATE_TIME ?? sample.END_DATE ?? ''),
     latitude: (() => {
       const val = sample.latitude ?? sample.SAMPLE_LATITUDE ?? sample.LATITUDE ?? sample.SAMPLE_TEST_LATITUDE ?? '';
@@ -427,24 +445,27 @@ export const sampleService = {
   async createSample(sampleData: Partial<Sample>): Promise<{ success: boolean; sample: Sample | null }> {
     const payload = {
       SAMPLE_ID: sampleData.sampleId,
+      SAMPLE_DATE_TIME: toDeviceDateTime(sampleData.createdDate || new Date().toISOString(), '/'),
       USER_ID: sampleData.userId || '',
-      MODE_OF_SAMPLE: sampleData.modeOfSample || '',
-      SAMPLE_TYPE: sampleData.sampleType || '',
-      SAMPLE_SOURCE: sampleData.source || '',
-      MAIN_SOURCE: sampleData.mainSource || '',
-      CUSTOMER: sampleData.customer || '',
-      SAMPLE_HABITATION: sampleData.habitation || '',
-      SAMPLE_DATE_OF_ISSUE: sampleData.sampleDateOfIssue || '',
-      SAMPLE_SUBMITTED_DATE: sampleData.sampleSubmittedDate || '',
-      SAMPLE_LATITUDE: sampleData.latitude !== '' && sampleData.latitude !== undefined ? String(sampleData.latitude) : '',
+      END_DATE_TIME: toDeviceDateTime(sampleData.endDate, '-'),
       SAMPLE_LONGITUDE: sampleData.longitude !== '' && sampleData.longitude !== undefined ? String(sampleData.longitude) : '',
+      SAMPLE_LATITUDE: sampleData.latitude !== '' && sampleData.latitude !== undefined ? String(sampleData.latitude) : '',
       SAMPLE_ADDRESS: sampleData.testAddress || '',
       SAMPLE_VILLAGE: sampleData.testVillage || '',
       SAMPLE_TALUKA: sampleData.testTaluka || '',
       SAMPLE_DISTRICT: sampleData.testDistrict || '',
-      SAMPLE_SOURCE_ADDRESS: '',
-      SAMPLE_DATE_TIME: new Date().toISOString(),
-      END_DATE_TIME: '',
+      CUSTOMER_NAME: sampleData.customer || '',
+      CUSTOMER_ADDRESS: sampleData.customerAddress || '',
+      SAMPLE_SOURCE: sampleData.source || '',
+      MAIN_SOURCE: sampleData.mainSource || '',
+      MODE_OF_SAMPLE: sampleData.modeOfSample || '',
+      SAMPLE_TYPE: sampleData.sampleType || '',
+      SAMPLE_HABITATION: sampleData.habitation || '',
+      DATE_OF_ISSUE: sampleData.sampleDateOfIssue || '',
+      SUBMITTED_DATE: sampleData.sampleSubmittedDate || '',
+      SUBMITTED_BY: sampleData.sampleSubmittedBy || '',
+      TEST_REPORT_NO: sampleData.testReportNo || '',
+      CUSTOMER_REF_NO: sampleData.customerReferenceNo || '',
     };
     console.log('[sampleService] createSample payload:', JSON.stringify(payload));
 
@@ -550,24 +571,27 @@ export const sampleService = {
       const samplesObj = samplesList.reduce((acc: any, p, index) => {
         acc[`S_${index + 1}`] = {
           SAMPLE_ID: p.sampleId,
-          sampleId: p.sampleId,
-          SAMPLE_DATE_TIME: p.createdDate || new Date().toISOString(),
+          SAMPLE_DATE_TIME: toDeviceDateTime(p.createdDate || new Date().toISOString(), '/'),
           USER_ID: p.userId || '',
-          userId: p.userId || '',
-          USER_NAME: p.userName || '',
-          MODE_OF_SAMPLE: p.modeOfSample || '',
-          SAMPLE_TYPE: p.sampleType || '',
-          SAMPLE_SOURCE: p.source || '',
-          MAIN_SOURCE: p.mainSource || '',
-          CUSTOMER: p.customer || '',
-          HABITATION: p.habitation || '',
-          DISTRICT: p.district || '',
-          SAMPLE_LATITUDE: p.latitude !== '' && p.latitude !== undefined ? Number(p.latitude) : '',
-          SAMPLE_LONGITUDE: p.longitude !== '' && p.longitude !== undefined ? Number(p.longitude) : '',
+          END_DATE_TIME: toDeviceDateTime(p.endDate, '-'),
+          SAMPLE_LONGITUDE: p.longitude !== '' && p.longitude !== undefined ? String(p.longitude) : '',
+          SAMPLE_LATITUDE: p.latitude !== '' && p.latitude !== undefined ? String(p.latitude) : '',
           SAMPLE_ADDRESS: p.testAddress || '',
           SAMPLE_VILLAGE: p.testVillage || '',
           SAMPLE_TALUKA: p.testTaluka || '',
           SAMPLE_DISTRICT: p.testDistrict || '',
+          CUSTOMER_NAME: p.customer || '',
+          CUSTOMER_ADDRESS: p.customerAddress || '',
+          SAMPLE_SOURCE: p.source || '',
+          MAIN_SOURCE: p.mainSource || '',
+          MODE_OF_SAMPLE: p.modeOfSample || '',
+          SAMPLE_TYPE: p.sampleType || '',
+          SAMPLE_HABITATION: p.habitation || '',
+          DATE_OF_ISSUE: p.sampleDateOfIssue || '',
+          SUBMITTED_DATE: p.sampleSubmittedDate || '',
+          SUBMITTED_BY: p.sampleSubmittedBy || '',
+          TEST_REPORT_NO: p.testReportNo || '',
+          CUSTOMER_REF_NO: p.customerReferenceNo || '',
         };
         return acc;
       }, {});

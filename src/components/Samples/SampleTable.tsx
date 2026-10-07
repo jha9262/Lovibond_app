@@ -15,33 +15,34 @@ interface SampleTableProps {
   onRetry?: () => void;
   searchQuery?: string;
   startIndex?: number;
+  currentPage?: number;
 }
 
-const TableSkeleton = () => (
+const TableSkeleton = ({ mode }: { mode: 'recent' | 'full' }) => (
   <div className="w-full">
     <table className="w-full text-left">
       <thead className="bg-industrial-50 text-[10px] font-bold uppercase tracking-wider text-industrial-500 border-b border-industrial-100">
         <tr>
-          <th className="px-4 py-3.5 w-12 hidden sm:table-cell text-center">No</th>
+          {mode === 'full' && <th className="px-4 py-3.5 w-12 hidden sm:table-cell text-center">No</th>}
           <th className="px-4 py-3.5">Sample ID</th>
           <th className="px-4 py-3.5">User ID</th>
-          <th className="px-4 py-3.5">Sample Type</th>
+          {mode === 'full' && <th className="px-4 py-3.5">Sample Type</th>}
           <th className="px-4 py-3.5 hidden sm:table-cell">District</th>
-          <th className="px-4 py-3.5 text-right">Created Date</th>
-          <th className="px-4 py-3.5 hidden sm:table-cell text-right">End Date</th>
+          <th className={`px-4 py-3.5 ${mode === 'full' ? 'text-right' : ''}`}>Created Date</th>
+          <th className={`px-4 py-3.5 ${mode === 'full' ? 'text-right hidden sm:table-cell' : ''}`}>End Date</th>
           <th className="px-4 py-3.5 text-center">Actions</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-industrial-100 bg-white animate-pulse">
         {[1, 2, 3, 4, 5].map((item) => (
           <tr key={item}>
-            <td className="px-4 py-3 hidden sm:table-cell"><div className="h-4 bg-industrial-100 rounded w-6 mx-auto" /></td>
+            {mode === 'full' && <td className="px-4 py-3 hidden sm:table-cell"><div className="h-4 bg-industrial-100 rounded w-6 mx-auto" /></td>}
             <td className="px-4 py-3"><div className="h-4 bg-industrial-100 rounded w-24" /></td>
             <td className="px-4 py-3"><div className="h-4 bg-industrial-100 rounded w-20" /></td>
-            <td className="px-4 py-3"><div className="h-4 bg-industrial-100 rounded w-20" /></td>
+            {mode === 'full' && <td className="px-4 py-3"><div className="h-4 bg-industrial-100 rounded w-20" /></td>}
             <td className="px-4 py-3 hidden sm:table-cell"><div className="h-4 bg-industrial-100 rounded w-24" /></td>
-            <td className="px-4 py-3 text-right"><div className="h-4 bg-industrial-100 rounded w-28 ml-auto" /></td>
-            <td className="px-4 py-3 hidden sm:table-cell text-right"><div className="h-4 bg-industrial-100 rounded w-28 ml-auto" /></td>
+            <td className={`px-4 py-3 ${mode === 'full' ? 'text-right' : ''}`}><div className={`h-4 bg-industrial-100 rounded w-28 ${mode === 'full' ? 'ml-auto' : ''}`} /></td>
+            <td className={`px-4 py-3 ${mode === 'full' ? 'text-right hidden sm:table-cell' : ''}`}><div className={`h-4 bg-industrial-100 rounded w-28 ${mode === 'full' ? 'ml-auto' : ''}`} /></td>
             <td className="px-4 py-3"><div className="h-6 bg-industrial-100 rounded w-8 mx-auto" /></td>
           </tr>
         ))}
@@ -50,12 +51,12 @@ const TableSkeleton = () => (
   </div>
 );
 
-const SampleTable: React.FC<SampleTableProps> = ({ samples, loading, error, mode, onCreateSample, onRetry, searchQuery, startIndex = 0 }) => {
+const SampleTable: React.FC<SampleTableProps> = ({ samples, loading, error, mode, onCreateSample, onRetry, searchQuery, startIndex = 0, currentPage = 1 }) => {
   const navigate = useNavigate();
   const [selectedSampleForDownload, setSelectedSampleForDownload] = useState<Sample | null>(null);
 
   if (loading) {
-    return <TableSkeleton />;
+    return <TableSkeleton mode={mode} />;
   }
 
   if (error) {
@@ -108,7 +109,7 @@ const SampleTable: React.FC<SampleTableProps> = ({ samples, loading, error, mode
             {mode === 'full' && <th className="px-5 py-4">Sample Type</th>}
             <th className="px-5 py-4 hidden sm:table-cell">District</th>
             <th className={`px-5 py-4 ${mode === 'full' ? 'text-right' : ''}`}>Created Date</th>
-            {mode === 'full' && <th className="px-5 py-4 hidden sm:table-cell text-right">End Date</th>}
+            <th className={`px-5 py-4 ${mode === 'full' ? 'text-right hidden sm:table-cell' : ''}`}>End Date</th>
             <th className="px-5 py-4 text-center w-20">Actions</th>
           </tr>
         </thead>
@@ -121,14 +122,18 @@ const SampleTable: React.FC<SampleTableProps> = ({ samples, loading, error, mode
               {mode === 'full' && <td className="px-5 py-4 text-industrial-600">{sample.sampleType || '—'}</td>}
               <td className="px-5 py-4 text-industrial-600 hidden sm:table-cell">{sample.testDistrict || sample.district || '—'}</td>
               <td className={`px-5 py-4 text-industrial-600 text-sm ${mode === 'full' ? 'text-right text-xs font-medium text-industrial-500' : ''}`}>
-                {mode === 'recent' ? sample.createdDate : formatDate(sample.createdDate)}
+                {mode === 'recent' ? (sample.createdDate || '—') : formatDate(sample.createdDate)}
               </td>
-              {mode === 'full' && <td className="px-5 py-4 text-industrial-500 text-xs font-medium hidden sm:table-cell text-right">{formatDate(sample.endDate)}</td>}
+              <td className={`px-5 py-4 text-industrial-600 ${mode === 'full' ? 'text-right text-xs font-medium text-industrial-500 hidden sm:table-cell' : 'text-sm'}`}>
+                {mode === 'recent' ? (sample.endDate || '—') : formatDate(sample.endDate)}
+              </td>
               <td className="px-5 py-4">
                 <div className="flex items-center justify-center gap-2">
                   {mode === 'full' && (
                     <button
-                      onClick={() => navigate(`/samples/${encodeURIComponent(sample.sampleId)}`, { state: { sample } })}
+                      onClick={() => navigate(`/samples/${encodeURIComponent(sample.sampleId)}`, {
+                        state: { sample, returnPage: currentPage, returnSearch: searchQuery || '' },
+                      })}
                       title="View sample"
                       className="rounded-md border border-industrial-200 bg-white p-1.5 text-industrial-600 hover:text-brand-600 hover:bg-brand-50/50 transition-colors focus:ring-2 focus:ring-brand-500 outline-none"
                     >

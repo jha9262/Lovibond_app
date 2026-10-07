@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Edit2, Trash2, Plus, Users, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Edit2, Trash2, Plus, Users, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '../ui';
 import AddUserForm from './AddUserForm';
@@ -110,24 +110,64 @@ const UserDirectory: React.FC<UserDirectoryProps> = ({ users, pagination, loadin
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-industrial-100 px-5 py-4 bg-white">
             <p className="text-sm text-industrial-500">
-              Showing <span className="font-semibold text-brand-700">{Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}–{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-semibold text-industrial-900">{pagination.total}</span> users
+              {pagination.total === 0 ? (
+                'No users found'
+              ) : (
+                <>
+                  Showing{' '}
+                  <span className="font-semibold text-brand-700">
+                    {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}
+                  </span>{' '}
+                  to{' '}
+                  <span className="font-semibold text-brand-700">
+                    {Math.min(pagination.page * pagination.limit, pagination.total)}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-semibold text-industrial-900">{pagination.total}</span>{' '}
+                  users
+                </>
+              )}
             </p>
             {pagination.totalPages > 1 && (
-              <nav className="flex items-center gap-1.5" aria-label="User list pagination">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => request({ page: pagination.page - 1 })}
                   disabled={pagination.page <= 1}
-                  className="inline-flex items-center gap-1 rounded-lg border border-industrial-200 px-3 py-1.5 text-xs font-bold text-industrial-700 hover:bg-industrial-50 disabled:cursor-not-allowed disabled:opacity-40"
-                ><ChevronLeft size={14} />Previous</button>
-                <span className="px-2 text-xs font-semibold text-industrial-500">Page {pagination.page} of {pagination.totalPages}</span>
+                  className="px-3 py-1.5 text-xs font-bold text-industrial-700 bg-white border border-industrial-200 rounded-lg hover:bg-industrial-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from(
+                    { length: Math.min(pagination.totalPages, 15) },
+                    (_, i) => i + 1
+                  ).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => request({ page: pageNum })}
+                      className={`w-7 h-7 flex items-center justify-center text-xs font-bold rounded-lg transition-colors ${
+                        pageNum === pagination.page
+                          ? 'bg-brand-600 text-white shadow-sm'
+                          : 'text-industrial-700 hover:bg-industrial-100 border border-transparent'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => request({ page: pagination.page + 1 })}
                   disabled={pagination.page >= pagination.totalPages}
-                  className="inline-flex items-center gap-1 rounded-lg border border-industrial-200 px-3 py-1.5 text-xs font-bold text-industrial-700 hover:bg-industrial-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >Next<ChevronRight size={14} /></button>
-              </nav>
+                  className="px-3 py-1.5 text-xs font-bold text-industrial-700 bg-white border border-industrial-200 rounded-lg hover:bg-industrial-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             )}
           </div>
         </>

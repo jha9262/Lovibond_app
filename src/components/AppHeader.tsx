@@ -30,13 +30,14 @@ const getBreadcrumb = (pathname: string, state: any) => {
   if (p === '/settings/wifi') return { category: 'Settings', title: 'WiFi Configuration' };
   if (p === '/settings/device-communication') return { category: 'Settings', title: 'Device Communication' };
   if (p === '/settings/user-management') return { category: 'Settings', title: 'User Management' };
+  if (p === '/settings/report-configuration') return { category: 'Settings', title: 'Report Configuration' };
   if (p.startsWith('/report')) return { category: 'Analytics', title: 'Reports & Logs' };
   if (p === '/users') return { category: 'Administration', title: 'User Management' };
   return { category: 'System', title: 'Water Analysis' };
 };
 
 const AppHeader: React.FC = () => {
-  const { isAuthenticated, userId, role, isMaster, logout } = useAuth();
+  const { isAuthenticated, userId, userName, role, isMaster, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,7 +90,7 @@ const AppHeader: React.FC = () => {
                     {role || 'USER'}
                   </span>
                 </div>
-                <span className="text-xs text-industrial-900 font-black uppercase tracking-wide leading-none mt-0.5">{userId || 'LOVIBOND'}</span>
+                <span className="text-xs text-industrial-900 font-black uppercase tracking-wide leading-none mt-0.5">{userName || userId || 'LOVIBOND'}</span>
               </div>
             </div>
 

@@ -66,7 +66,14 @@ const SampleDetails: React.FC = () => {
     <SamplesLayout>
       <div className="w-full space-y-6">
         <div>
-          <Link to="/samples" className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-industrial-500 hover:text-brand-600 transition-colors">
+          <Link
+            to="/samples"
+            state={{
+              returnPage: location.state?.returnPage,
+              returnSearch: location.state?.returnSearch,
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-industrial-500 hover:text-brand-600 transition-colors"
+          >
             <ArrowLeft size={14} /> <span>Back to Samples</span>
           </Link>
         </div>
@@ -82,7 +89,13 @@ const SampleDetails: React.FC = () => {
           </div>
           {sample && !loading && (
             <div className="relative z-10 flex items-center gap-2.5">
-              <button onClick={() => navigate(`/samples/${encodeURIComponent(sampleId!)}/edit`, { state: { sample } })} className="inline-flex items-center gap-1.5 rounded-xl border border-industrial-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-industrial-700 shadow-xs hover:bg-industrial-50">
+              <button onClick={() => navigate(`/samples/${encodeURIComponent(sampleId!)}/edit`, {
+                state: {
+                  sample,
+                  returnPage: location.state?.returnPage,
+                  returnSearch: location.state?.returnSearch,
+                },
+              })} className="inline-flex items-center gap-1.5 rounded-xl border border-industrial-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-industrial-700 shadow-xs hover:bg-industrial-50">
                 <Edit2 size={14} /> <span>Edit</span>
               </button>
               <button onClick={() => setDeleteModalOpen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-600 shadow-xs hover:bg-red-50">
@@ -114,15 +127,20 @@ const SampleDetails: React.FC = () => {
                 <div className="grid grid-cols-1 gap-y-6 gap-x-12 md:grid-cols-3">
                   <DetailItem label="Sample ID" value={sample.sampleId} />
                   <DetailItem label="User ID" value={sample.userId} />
-                  <DetailItem label="Customer" value={sample.customer} />
+                  <DetailItem label="Customer Name" value={sample.customer} />
+                  <DetailItem label="Customer Address" value={sample.customerAddress} />
 
                   <DetailItem label="Sample Type" value={sample.sampleType} />
                   <DetailItem label="Mode of Sample" value={sample.modeOfSample} />
                   <DetailItem label="Habitation" value={sample.habitation} />
 
-                  <DetailItem label="Sample Date of Issue" value={sample.sampleDateOfIssue} />
-                  <DetailItem label="Sample Submitted Date" value={sample.sampleSubmittedDate} />
-                  <DetailItem label="Created Date" value={formatDate(sample.createdDate)} />
+                  <DetailItem label="Date of Issue" value={sample.sampleDateOfIssue} />
+                  <DetailItem label="Submitted Date" value={sample.sampleSubmittedDate} />
+                  <DetailItem label="Submitted By" value={sample.sampleSubmittedBy} />
+                  <DetailItem label="Customer Reference No." value={sample.customerReferenceNo} />
+                  <DetailItem label="Test Report No." value={sample.testReportNo} />
+                  <DetailItem label="Sample Date & Time" value={formatDate(sample.createdDate)} />
+                  <DetailItem label="End Date & Time" value={formatDate(sample.endDate)} />
                 </div>
               </div>
 

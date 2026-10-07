@@ -14,6 +14,7 @@ import WifiConfiguration from '../pages/settings/WifiConfiguration';
 import DeviceCommunicationPage from '../pages/settings/DeviceCommunicationPage';
 import UserManagementPage from '../pages/settings/UserManagementPage';
 import SampleLogsPage from '../pages/settings/SampleLogsPage';
+import ReportConfigurationPage from '../pages/settings/ReportConfigurationPage';
 
 const SettingsRedirect: React.FC = () => {
   const target = sessionStorage.getItem('lovibond_last_settings_route') || '/settings/device-communication';
@@ -37,6 +38,7 @@ const Main: React.FC = () => {
         <Route path="/settings/wifi" element={<WifiConfiguration />} />
         <Route path="/settings/user-management" element={<UserManagementPage />} />
         <Route path="/settings/sample-logs" element={<SampleLogsPage />} />
+        <Route path="/settings/report-configuration" element={<ReportConfigurationPage />} />
         <Route path="/SETTINGS" element={<SettingsRedirect />} />
         <Route path="/report" element={<ReportPage />} />
         <Route path="/ReportView" element={<ReportViewPage />} />

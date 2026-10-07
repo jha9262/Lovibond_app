@@ -8,6 +8,23 @@ import { sampleService } from '../../services/sampleService';
 import { formatDate } from '../../utils/dateTime';
 import { Sample } from '../../types';
 
+const editableFields: (keyof Sample)[] = [
+  'sampleId', 'userId', 'createdDate', 'endDate', 'modeOfSample', 'sampleType',
+  'source', 'mainSource', 'customer', 'customerAddress', 'sampleDateOfIssue',
+  'habitation', 'testVillage', 'testTaluka', 'testDistrict', 'testAddress',
+  'latitude', 'longitude', 'sampleSubmittedDate', 'customerReferenceNo',
+  'sampleSubmittedBy', 'testReportNo',
+];
+
+const comparableValue = (field: keyof Sample, value: unknown) => {
+  const text = String(value ?? '').trim();
+  if (field === 'createdDate' || field === 'endDate') {
+    const match = text.match(/^(\d{4})[/-](\d{2})[/-](\d{2})[-T ](\d{2}):(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+  }
+  return text;
+};
+
 const EditSample: React.FC = () => {
   const { sampleId } = useParams<{ sampleId: string }>();
   const navigate = useNavigate();
@@ -41,9 +58,23 @@ const EditSample: React.FC = () => {
   const handleUpdate = async (formData: Partial<Sample>) => {
     setIsSubmitting(true);
     try {
+      const hasChanges = editableFields.some((field) =>
+        comparableValue(field, initialData?.[field]) !== comparableValue(field, formData[field])
+      );
+      const listState = {
+        returnPage: Number(location.state?.returnPage) || 1,
+        returnSearch: typeof location.state?.returnSearch === 'string' ? location.state.returnSearch : '',
+      };
+
+      if (!hasChanges) {
+        toast.success('No changes to save.');
+        navigate('/samples', { state: listState });
+        return;
+      }
+
       await sampleService.updateSample(sampleId!, formData);
       toast.success('Sample updated successfully.');
-      navigate(`/samples/${encodeURIComponent(sampleId!)}`);
+      navigate('/samples', { state: listState });
     } catch (err: any) {
       toast.error(err?.message || 'Unable to update sample');
     } finally {
@@ -64,7 +95,15 @@ const EditSample: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-industrial-900 uppercase display-font">Edit Sample</h1>
           </div>
           <div className="relative z-10">
-            <Link to={`/samples/${encodeURIComponent(sampleId!)}`} className="inline-flex items-center gap-1.5 rounded-xl border border-industrial-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-industrial-700 shadow-xs hover:bg-industrial-50">
+            <Link
+              to={`/samples/${encodeURIComponent(sampleId!)}`}
+              state={{
+                sample: initialData,
+                returnPage: location.state?.returnPage,
+                returnSearch: location.state?.returnSearch,
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-industrial-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-industrial-700 shadow-xs hover:bg-industrial-50"
+            >
               <ArrowLeft size={14} /> <span>Back to Details</span>
             </Link>
           </div>
@@ -89,7 +128,20 @@ const EditSample: React.FC = () => {
               )}
             </div>
             <div className="p-6">
-              <SampleForm initialValues={initialData} onSubmit={handleUpdate} onCancel={() => navigate(`/samples/${encodeURIComponent(sampleId!)}`)} submitLabel="Save Changes" isSubmitting={isSubmitting} isEdit={true} />
+              <SampleForm
+                initialValues={initialData}
+                onSubmit={handleUpdate}
+                onCancel={() => navigate(`/samples/${encodeURIComponent(sampleId!)}`, {
+                  state: {
+                    sample: initialData,
+                    returnPage: location.state?.returnPage,
+                    returnSearch: location.state?.returnSearch,
+                  },
+                })}
+                submitLabel="Save Changes"
+                isSubmitting={isSubmitting}
+                isEdit={true}
+              />
             </div>
           </section>
         )}

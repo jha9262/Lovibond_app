@@ -12,14 +12,28 @@ interface SampleFormProps {
   isEdit?: boolean;
 }
 
+const toDateTimeInput = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === '') return '';
+  const match = String(value).trim().match(/^(\d{4})[/-](\d{2})[/-](\d{2})[-T ](\d{2}):(\d{2})/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 const EMPTY_VALUES = {
   sampleId: '',
   userId: '',
+  createdDate: toDateTimeInput(new Date().toISOString()),
+  endDate: '',
   modeOfSample: '',
   sampleType: '',
   source: '',
   mainSource: '',
   customer: '',
+  customerAddress: '',
   sampleDateOfIssue: '',
   habitation: '',
   testVillage: '',
@@ -29,6 +43,9 @@ const EMPTY_VALUES = {
   latitude: '',
   longitude: '',
   sampleSubmittedDate: '',
+  customerReferenceNo: '',
+  sampleSubmittedBy: '',
+  testReportNo: '',
 };
 
 type FormValues = typeof EMPTY_VALUES;
@@ -93,17 +110,21 @@ const SampleForm: React.FC<SampleFormProps> = ({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const [locError, setLocError] = useState('');
+  const [isLocationFetched, setIsLocationFetched] = useState(false);
 
   useEffect(() => {
     if (initialValues && Object.keys(initialValues).length > 0) {
       setValues({
         sampleId: initialValues.sampleId || '',
         userId: initialValues.userId || '',
+        createdDate: toDateTimeInput(initialValues.createdDate),
+        endDate: toDateTimeInput(initialValues.endDate),
         modeOfSample: initialValues.modeOfSample || '',
         sampleType: initialValues.sampleType || '',
         source: initialValues.source || '',
         mainSource: initialValues.mainSource || '',
         customer: initialValues.customer || '',
+        customerAddress: initialValues.customerAddress || '',
         sampleDateOfIssue: initialValues.sampleDateOfIssue || '',
         habitation: initialValues.habitation || '',
         testVillage: initialValues.testVillage || '',
@@ -119,6 +140,9 @@ const SampleForm: React.FC<SampleFormProps> = ({
             ? String(initialValues.longitude)
             : '',
         sampleSubmittedDate: initialValues.sampleSubmittedDate || '',
+        customerReferenceNo: initialValues.customerReferenceNo || '',
+        sampleSubmittedBy: initialValues.sampleSubmittedBy || '',
+        testReportNo: initialValues.testReportNo || '',
       });
     } else {
       setValues(EMPTY_VALUES);
@@ -126,6 +150,7 @@ const SampleForm: React.FC<SampleFormProps> = ({
     setErrors({});
     setHasSubmitted(false);
     setLocError('');
+    setIsLocationFetched(false);
   }, [initialValues]);
 
   const set = useCallback((key: keyof FormValues, val: string) => {
@@ -135,6 +160,7 @@ const SampleForm: React.FC<SampleFormProps> = ({
 
   const fetchLocation = () => {
     if (!navigator.geolocation) {
+      setIsLocationFetched(false);
       setLocError('Geolocation is not supported by your browser. Please enter manually.');
       return;
     }
@@ -159,6 +185,7 @@ const SampleForm: React.FC<SampleFormProps> = ({
           let taluka = '';
           let district = '';
           let address = '';
+          let locationResolved = false;
 
           // 1. Try Nominatim (OpenStreetMap)
           try {
@@ -189,18 +216,23 @@ const SampleForm: React.FC<SampleFormProps> = ({
               const rawDistrict = addr.state_district || addr.district || addr.county || '';
               district = rawDistrict.replace(/\s+(district|dist\.?)$/i, '').trim();
 
-              // Clean address without duplicate names
+              // Keep Address limited to street/local details. Village, taluka,
+              // district, state, and country are represented in their own fields.
+              const administrativeNames = [village, taluka, district]
+                .filter(Boolean)
+                .map((part) => part.toLowerCase().replace(/\s+/g, ' ').trim());
               const parts = [
+                addr.house_number,
                 addr.road,
-                addr.neighbourhood || addr.suburb,
-                village,
-                taluka !== village ? taluka : '',
-                district !== taluka && district !== village ? district : '',
-                addr.state,
-                addr.country
-              ].filter(Boolean);
+                addr.pedestrian,
+                addr.path,
+                addr.neighbourhood,
+                addr.suburb,
+              ].filter((part: unknown): part is string => typeof part === 'string' && part.trim() !== '')
+                .filter((part) => !administrativeNames.includes(part.toLowerCase().replace(/\s+/g, ' ').trim()));
               const uniqueParts = Array.from(new Set(parts));
-              address = uniqueParts.join(', ') || data.display_name || '';
+              address = uniqueParts.join(', ');
+              locationResolved = Boolean(village || taluka || district || address);
             }
           } catch (osmErr) {
             console.warn('[SampleForm] Nominatim reverse-geocode failed:', osmErr);
@@ -228,8 +260,12 @@ const SampleForm: React.FC<SampleFormProps> = ({
                 taluka = (adminTaluka || data.locality || '').replace(/\s+(taluka|taluk|tehsil|subdistrict|block)$/i, '').trim();
                 district = (adminDistrict || data.principalSubdivision || '').replace(/\s+(district|dist\.?)$/i, '').trim();
 
-                const bdcParts = Array.from(new Set([data.locality, data.city, taluka, district, data.principalSubdivision, data.countryName].filter(Boolean)));
-                address = bdcParts.join(', ');
+                const informative = data.localityInfo?.informative || [];
+                address = Array.from(new Set(informative
+                  .filter((item: any) => /street|road|avenue|lane|highway|path/i.test(`${item?.name || ''} ${item?.description || ''}`))
+                  .map((item: any) => String(item?.name || '').trim())
+                  .filter(Boolean))).join(', ');
+                locationResolved = Boolean(village || taluka || district || address);
               }
             } catch (bdcErr) {
               console.warn('[SampleForm] BigDataCloud reverse-geocode failed:', bdcErr);
@@ -240,11 +276,13 @@ const SampleForm: React.FC<SampleFormProps> = ({
             ...prev,
             latitude: String(lat),
             longitude: String(lng),
-            testVillage: village ? sanitizeText(village) : prev.testVillage,
-            testTaluka: taluka ? sanitizeText(taluka) : prev.testTaluka,
-            testDistrict: district ? sanitizeText(district) : prev.testDistrict,
-            testAddress: address ? sanitizeText(address) : prev.testAddress,
+            testVillage: locationResolved ? sanitizeText(village) : prev.testVillage,
+            testTaluka: locationResolved ? sanitizeText(taluka) : prev.testTaluka,
+            testDistrict: locationResolved ? sanitizeText(district) : prev.testDistrict,
+            testAddress: locationResolved ? sanitizeText(address) : prev.testAddress,
           }));
+          setIsLocationFetched(locationResolved);
+          setLocError(locationResolved ? '' : 'Unable to fetch location details. Please enter the location manually.');
           setErrors((prev) => ({
             ...prev,
             latitude: '',
@@ -256,11 +294,14 @@ const SampleForm: React.FC<SampleFormProps> = ({
           }));
         } catch (err: any) {
           console.warn('[SampleForm] Reverse geocoding error:', err);
+          setIsLocationFetched(false);
+          setLocError('Unable to fetch location details. Please enter the location manually.');
         } finally {
           setLocLoading(false);
         }
       },
       (error) => {
+        setIsLocationFetched(false);
         const messages: Record<number, string> = {
           [error.PERMISSION_DENIED]: 'Location access was denied. Please allow location permissions in your browser.',
           [error.POSITION_UNAVAILABLE]: 'Location information is currently unavailable.',
@@ -309,6 +350,10 @@ const SampleForm: React.FC<SampleFormProps> = ({
     if (values.source.length > SAMPLE_LIMITS.SAMPLE_SOURCE) errs.source = `Max ${SAMPLE_LIMITS.SAMPLE_SOURCE} characters`;
     if (values.mainSource.length > SAMPLE_LIMITS.MAIN_SOURCE) errs.mainSource = `Max ${SAMPLE_LIMITS.MAIN_SOURCE} characters`;
     if (values.customer.length > SAMPLE_LIMITS.CUSTOMER) errs.customer = `Max ${SAMPLE_LIMITS.CUSTOMER} characters`;
+    if (values.customerAddress.length > SAMPLE_LIMITS.CUSTOMER_ADDRESS) errs.customerAddress = `Max ${SAMPLE_LIMITS.CUSTOMER_ADDRESS} characters`;
+    if (values.customerReferenceNo.length > SAMPLE_LIMITS.CUSTOMER_REFERENCE_NO) errs.customerReferenceNo = `Max ${SAMPLE_LIMITS.CUSTOMER_REFERENCE_NO} characters`;
+    if (values.sampleSubmittedBy.length > SAMPLE_LIMITS.SAMPLE_SUBMITTED_BY) errs.sampleSubmittedBy = `Max ${SAMPLE_LIMITS.SAMPLE_SUBMITTED_BY} characters`;
+    if (values.testReportNo.length > SAMPLE_LIMITS.TEST_REPORT_NO) errs.testReportNo = `Max ${SAMPLE_LIMITS.TEST_REPORT_NO} characters`;
 
     // Dates limit is essentially length of string but we can enforce it just in case
     if (values.sampleDateOfIssue.length > SAMPLE_LIMITS.SAMPLE_DATE_OF_ISSUE) errs.sampleDateOfIssue = `Invalid date`;
@@ -356,11 +401,14 @@ const SampleForm: React.FC<SampleFormProps> = ({
     onSubmit({
       sampleId: values.sampleId.trim(),
       userId: values.userId.trim(),
+      createdDate: values.createdDate,
+      endDate: values.endDate,
       modeOfSample: values.modeOfSample.trim(),
       sampleType: values.sampleType.trim(),
       source: values.source.trim(),
       mainSource: values.mainSource.trim(),
       customer: values.customer.trim(),
+      customerAddress: values.customerAddress.trim(),
       sampleDateOfIssue: values.sampleDateOfIssue,
       habitation: values.habitation.trim(),
       testVillage: values.testVillage.trim(),
@@ -370,6 +418,9 @@ const SampleForm: React.FC<SampleFormProps> = ({
       latitude: values.latitude.trim() !== '' ? Number(values.latitude) : '',
       longitude: values.longitude.trim() !== '' ? Number(values.longitude) : '',
       sampleSubmittedDate: values.sampleSubmittedDate,
+      customerReferenceNo: values.customerReferenceNo.trim(),
+      sampleSubmittedBy: values.sampleSubmittedBy.trim(),
+      testReportNo: values.testReportNo.trim(),
     });
   };
 
@@ -378,6 +429,13 @@ const SampleForm: React.FC<SampleFormProps> = ({
     const isError = !!fieldError;
 
     const labelStr = overrideLabel || (key === 'modeOfSample' ? 'Mode of Sample' : key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
+    const maxLength = ({
+      customer: SAMPLE_LIMITS.CUSTOMER,
+      habitation: SAMPLE_LIMITS.HABITATION,
+      customerReferenceNo: SAMPLE_LIMITS.CUSTOMER_REFERENCE_NO,
+      sampleSubmittedBy: SAMPLE_LIMITS.SAMPLE_SUBMITTED_BY,
+      testReportNo: SAMPLE_LIMITS.TEST_REPORT_NO,
+    } as Partial<Record<keyof FormValues, number>>)[key];
 
     return (
       <Field label={labelStr} error={fieldError}>
@@ -385,6 +443,7 @@ const SampleForm: React.FC<SampleFormProps> = ({
           type="text"
           value={values[key]}
           onChange={(e) => set(key, sanitizeText(e.target.value))}
+          maxLength={maxLength}
           placeholder={placeholder}
           disabled={isSubmitting || !!disabled}
           className={inputClass(isError)}
@@ -420,19 +479,51 @@ const SampleForm: React.FC<SampleFormProps> = ({
         {txt('mainSource', 'Enter main source')}
         {txt('customer', 'Enter customer name', false, 'Customer Name')}
 
-        <Field label="Sample Date of Issue" error={getDisplayError('sampleDateOfIssue')}>
+        <Field label="Customer Address" error={getDisplayError('customerAddress')}>
+          <input type="text" value={values.customerAddress}
+            onChange={(e) => set('customerAddress', sanitizeText(e.target.value))}
+            maxLength={SAMPLE_LIMITS.CUSTOMER_ADDRESS}
+            placeholder="Enter customer address"
+            disabled={isSubmitting} className={inputClass(!!getDisplayError('customerAddress'))} />
+        </Field>
+
+        <Field label="Date of Issue" error={getDisplayError('sampleDateOfIssue')}>
           <input type="date" value={values.sampleDateOfIssue}
             onChange={(e) => set('sampleDateOfIssue', e.target.value)}
             disabled={isSubmitting} className={inputClass(!!getDisplayError('sampleDateOfIssue'))} />
         </Field>
 
-        <Field label="Sample Submitted Date" error={getDisplayError('sampleSubmittedDate')}>
+        <Field label="Submitted Date" error={getDisplayError('sampleSubmittedDate')}>
           <input type="date" value={values.sampleSubmittedDate}
             onChange={(e) => set('sampleSubmittedDate', e.target.value)}
             disabled={isSubmitting} className={inputClass(!!getDisplayError('sampleSubmittedDate'))} />
         </Field>
 
         {txt('habitation', 'Enter habitation', false, 'Habitation')}
+
+        <Field label="Customer Reference No.">
+          <input type="text" value={values.customerReferenceNo}
+            onChange={(e) => set('customerReferenceNo', sanitizeText(e.target.value))}
+            maxLength={SAMPLE_LIMITS.CUSTOMER_REFERENCE_NO}
+            placeholder="Enter customer reference no."
+            disabled={isSubmitting} className={inputClass(false)} />
+        </Field>
+
+        <Field label="Sample Submitted By">
+          <input type="text" value={values.sampleSubmittedBy}
+            onChange={(e) => set('sampleSubmittedBy', sanitizeText(e.target.value))}
+            maxLength={SAMPLE_LIMITS.SAMPLE_SUBMITTED_BY}
+            placeholder="Enter submitted by"
+            disabled={isSubmitting} className={inputClass(false)} />
+        </Field>
+
+        <Field label="Test Report No.">
+          <input type="text" value={values.testReportNo}
+            onChange={(e) => set('testReportNo', sanitizeText(e.target.value))}
+            maxLength={SAMPLE_LIMITS.TEST_REPORT_NO}
+            placeholder="Enter test report no."
+            disabled={isSubmitting} className={inputClass(false)} />
+        </Field>
 
         <SectionHeading
           action={
@@ -451,25 +542,25 @@ const SampleForm: React.FC<SampleFormProps> = ({
           Location Details
         </SectionHeading>
 
-        {txt('testVillage', 'Enter village', false, 'Village')}
-        {txt('testTaluka', 'Enter taluka', false, 'Taluka')}
-        {txt('testDistrict', 'Enter district', false, 'District')}
+        {txt('testVillage', 'Enter village', isLocationFetched, 'Village')}
+        {txt('testTaluka', 'Enter taluka', isLocationFetched, 'Taluka')}
+        {txt('testDistrict', 'Enter district', isLocationFetched, 'District')}
 
         <div className="sm:col-span-2">
-          {txt('testAddress', 'Enter test address', false, 'Address')}
+          {txt('testAddress', 'Enter test address', isLocationFetched, 'Address')}
         </div>
 
         <Field label="Latitude" error={getDisplayError('latitude')}>
           <input type="text" inputMode="decimal" pattern="[0-9.-]*" value={values.latitude}
           onChange={(e) => set('latitude', sanitizeCoordinate(e.target.value))}
-            placeholder="e.g. 23.0225" disabled={isSubmitting}
+            placeholder="e.g. 23.0225" disabled={isSubmitting || isLocationFetched}
             className={inputClass(!!getDisplayError('latitude'))} />
         </Field>
 
         <Field label="Longitude" error={getDisplayError('longitude')}>
           <input type="text" inputMode="decimal" pattern="[0-9.-]*" value={values.longitude}
           onChange={(e) => set('longitude', sanitizeCoordinate(e.target.value))}
-            placeholder="e.g. 72.5714" disabled={isSubmitting}
+            placeholder="e.g. 72.5714" disabled={isSubmitting || isLocationFetched}
             className={inputClass(!!getDisplayError('longitude'))} />
         </Field>
 

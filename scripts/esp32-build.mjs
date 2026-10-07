@@ -103,7 +103,7 @@ function buildPackage(mode) {
   const cachedZipPath = path.join(packageCacheDir, targetZipName);
 
   console.log(`🤐 Archiving assets into ${targetZipName}...`);
-  const filesToZip = ['index.html', ...gzFiles].join(' ');
+  const filesToZip = ['index.html', ...gzFiles, 'logo.png'].join(' ');
 
   // Create temporary zip in dist, then move to cache
   execSync(`zip -9q "${targetZipName}" ${filesToZip}`, { cwd: distDir });
@@ -124,7 +124,7 @@ function buildPackage(mode) {
 // Main execution CLI
 try {
   const args = process.argv.slice(2);
-  const requestedMode = args[0] ? args[0].toLowerCase().replace('--', '') : 'http';
+  const requestedMode = args[0] ? args[0].toLowerCase().replace('--', '') : 'all';
 
   const results = [];
     if (requestedMode === 'https') {

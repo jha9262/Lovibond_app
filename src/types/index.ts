@@ -18,10 +18,15 @@ export interface Sample {
   source: string;
   mainSource: string;
   customer: string;
+  customerAddress?: string;
   habitation: string;
   district: string;
   sampleDateOfIssue: string;
   sampleSubmittedDate: string;
+  customerReferenceNo?: string;
+  sampleSubmittedBy?: string;
+  sampleReceiptDate?: string;
+  testReportNo?: string;
   endDate?: string;
   latitude: number | string;
   longitude: number | string;
@@ -116,5 +121,6 @@ export interface LoginResponse {
   success: boolean;
   message: string;
   USER_ID?: string;
+  USER_NAME?: string;
   ROLE?: UserRole;
 }

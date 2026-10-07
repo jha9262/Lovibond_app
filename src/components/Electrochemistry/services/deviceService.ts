@@ -14,7 +14,7 @@ export const deviceService = {
   selectSample: async (id: string, name: string) => {
     const sId = id || name || '';
     const response = await axios.get(`${API_URL}/SAMPLE_MANAGER_CONFIGURATION`, {
-      params: { ID: sId, MODULE },
+      params: { ID: sId, MODULE: MODULE },
       timeout: 15000,
     });
     return response.data;

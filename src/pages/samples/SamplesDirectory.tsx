@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Portal } from '../../components/ui';
@@ -14,11 +14,14 @@ const PAGE_SIZE = 5;
 
 const SamplesDirectory: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPage = Number(location.state?.returnPage) || 1;
+  const returnSearch = typeof location.state?.returnSearch === 'string' ? location.state.returnSearch : '';
 
   const [samples, setSamples] = useState<Sample[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(returnSearch);
 
   // Delete state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -37,7 +40,7 @@ const SamplesDirectory: React.FC = () => {
     totalPages: 1,
   });
 
-  const requestRef = useRef({ page: 1, limit: PAGE_SIZE, search: '' });
+  const requestRef = useRef({ page: returnPage, limit: PAGE_SIZE, search: returnSearch });
 
   const loadSamples = useCallback(async (params: { page?: number; search?: string } = {}) => {
     const request = {
@@ -67,7 +70,7 @@ const SamplesDirectory: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadSamples({ page: 1, search: '' });
+    loadSamples({ page: returnPage, search: returnSearch });
   }, [loadSamples]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,6 +124,11 @@ const SamplesDirectory: React.FC = () => {
       setIsCreating(false);
     }
   };
+
+  const pageStart = samples.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0;
+  const pageEnd = samples.length > 0 ? (pagination.page - 1) * pagination.limit + samples.length : 0;
+  const displayedTotal = Math.max(pagination.total, pageEnd);
+  const visibleTotalPages = Math.max(pagination.totalPages, pagination.page);
 
   return (
     <SamplesLayout>
@@ -178,6 +186,7 @@ const SamplesDirectory: React.FC = () => {
             error={error}
             mode="full"
             startIndex={(pagination.page - 1) * pagination.limit}
+            currentPage={pagination.page}
             onRetry={() => loadSamples()}
             onCreateSample={() => setCreateModalOpen(true)}
             searchQuery={searchQuery}
@@ -189,26 +198,26 @@ const SamplesDirectory: React.FC = () => {
           {!loading && !error && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-industrial-100 px-5 py-4 bg-white">
               <p className="text-sm text-industrial-500">
-                {pagination.total === 0 ? (
+                {displayedTotal === 0 ? (
                   'No samples found'
                 ) : (
                   <>
                     Showing{' '}
                     <span className="font-semibold text-brand-700">
-                      {Math.min((pagination.page - 1) * PAGE_SIZE + 1, pagination.total)}
+                      {pageStart}
                     </span>{' '}
                     to{' '}
                     <span className="font-semibold text-brand-700">
-                      {Math.min(pagination.page * PAGE_SIZE, pagination.total)}
+                      {pageEnd}
                     </span>{' '}
                     of{' '}
-                    <span className="font-semibold text-industrial-900">{pagination.total}</span>{' '}
+                    <span className="font-semibold text-industrial-900">{displayedTotal}</span>{' '}
                     samples
                   </>
                 )}
               </p>
 
-              {pagination.totalPages > 1 && (
+              {(pagination.totalPages > 1 || pagination.page > 1) && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => loadSamples({ page: pagination.page - 1 })}
@@ -220,7 +229,7 @@ const SamplesDirectory: React.FC = () => {
 
                   <div className="flex items-center gap-1">
                     {Array.from(
-                      { length: Math.min(pagination.totalPages, 15) }, // max 15 page buttons
+                      { length: Math.min(visibleTotalPages, 15) }, // max 15 page buttons
                       (_, i) => i + 1
                     ).map((pageNum) => (
                       <button

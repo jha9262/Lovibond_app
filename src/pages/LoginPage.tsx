@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
 
       if (response.success) {
         toast.success(response.message || 'Login successful');
-        login(response.USER_ID || cleanUserId, response.ROLE || 'ADMIN');
+        login(response.USER_ID || cleanUserId, response.ROLE || 'ADMIN', response.USER_NAME);
         navigate('/LIVE');
       } else {
         const errorMsg = response.message || 'Invalid User ID or Password';

@@ -46,22 +46,27 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
   };
 
   const handleUserIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
-    updateField('userId', val.substring(0, 20));
+    // Letters, numbers, _, -; no spaces (max 15)
+    const val = e.target.value.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 15);
+    updateField('userId', val);
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^A-Za-z0-9\s]/g, '');
-    updateField('name', val.substring(0, 30));
+    // Any normal name characters; spaces allowed (max 15)
+    const val = e.target.value.replace(/[^A-Za-z0-9\s.'-]/g, '').slice(0, 15);
+    updateField('name', val);
   };
 
   const handleDesignationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^A-Za-z0-9\s]/g, '');
-    updateField('designation', val.substring(0, 30));
+    // Text; spaces allowed (max 15)
+    const val = e.target.value.replace(/[^A-Za-z0-9\s./&'-]/g, '').slice(0, 15);
+    updateField('designation', val);
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField('password', e.target.value.replace(/[^A-Za-z0-9]/g, '').substring(0, 32));
+    // Any characters/symbols; no spaces (max 15)
+    const val = e.target.value.replace(/\s/g, '').slice(0, 15);
+    updateField('password', val);
   };
 
   const validate = () => {
@@ -69,29 +74,35 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
     const userId = values.userId.trim();
     if (!userId) {
       nextErrors.userId = 'User ID is required.';
-    } else if (userId.length > 20) {
-      nextErrors.userId = 'Max length is 20 characters.';
+    } else if (userId.length > 15) {
+      nextErrors.userId = 'Maximum 15 characters allowed.';
+    } else if (!/^[A-Za-z0-9_-]+$/.test(userId)) {
+      nextErrors.userId = 'Only letters, numbers, _, and - allowed (no spaces).';
     }
 
     const name = values.name.trim();
     if (!name) {
       nextErrors.name = 'Full Name is required.';
-    } else if (name.length > 30) {
-      nextErrors.name = 'Max length is 30 characters.';
+    } else if (name.length > 15) {
+      nextErrors.name = 'Maximum 15 characters allowed.';
     }
 
     const designation = values.designation.trim();
     if (!designation) {
       nextErrors.designation = 'Designation is required.';
+    } else if (designation.length > 15) {
+      nextErrors.designation = 'Maximum 15 characters allowed.';
     }
 
     const password = values.password;
     if (!password && !isEditing) {
       nextErrors.password = 'Password is required.';
+    } else if (password && /\s/.test(password)) {
+      nextErrors.password = 'No spaces allowed in password.';
     } else if (password && password.length < 4) {
       nextErrors.password = 'Minimum 4 characters required.';
-    } else if (password.length > 32) {
-      nextErrors.password = 'Max 32 characters.';
+    } else if (password && password.length > 15) {
+      nextErrors.password = 'Maximum 15 characters allowed.';
     }
 
     setErrors(nextErrors);
@@ -144,6 +155,7 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
                 type="text"
                 value={values.userId}
                 onChange={handleUserIdChange}
+                maxLength={15}
                 disabled={isEditing}
                 placeholder="e.g. operator1"
                 className={`w-full rounded-lg bg-[#f0f4f8] px-4 py-2.5 text-sm font-medium text-industrial-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-70 ${errors.userId ? 'border border-red-500' : 'border border-transparent'}`}
@@ -157,6 +169,7 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
                 type="text"
                 value={values.name}
                 onChange={handleNameChange}
+                maxLength={15}
                 placeholder="e.g. Machine Operator"
                 className={`w-full rounded-lg bg-[#f0f4f8] px-4 py-2.5 text-sm font-medium text-industrial-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 ${errors.name ? 'border border-red-500' : 'border border-transparent'}`}
               />
@@ -170,6 +183,7 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
                   type="text"
                   value={values.designation}
                   onChange={handleDesignationChange}
+                  maxLength={15}
                   placeholder="e.g. Operator"
                   className={`w-full rounded-lg bg-[#f0f4f8] px-4 py-2.5 text-sm font-medium text-industrial-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 ${errors.designation ? 'border border-red-500' : 'border border-transparent'}`}
                 />
@@ -200,6 +214,7 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
                   type={showPassword ? 'text' : 'password'}
                   value={values.password}
                   onChange={handlePasswordChange}
+                  maxLength={15}
                   placeholder={isEditing ? 'Leave blank to keep current password' : 'e.g. password123'}
                   className={`w-full rounded-lg bg-[#f0f4f8] pl-4 pr-10 py-2.5 text-sm font-medium text-industrial-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 ${errors.password ? 'border border-red-500' : 'border border-transparent'}`}
                 />
@@ -212,7 +227,7 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ isOpen, onClose, onSubmitUser
                 </button>
               </div>
               {errors.password && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.password}</p>}
-              <p className="mt-1 text-[11px] text-industrial-400">Use letters and numbers only. Passwords are never displayed in the user list.</p>
+              <p className="mt-1 text-[11px] text-industrial-400">Max 15 characters. Any characters and symbols allowed; no spaces. Passwords are never displayed in the user list.</p>
             </div>
           </div>
 

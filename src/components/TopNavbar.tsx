@@ -30,13 +30,14 @@ const getBreadcrumb = (pathname: string, state: any) => {
   if (p === '/settings/wifi') return { category: 'Settings', title: 'WiFi Configuration' };
   if (p === '/settings/device-communication') return { category: 'Settings', title: 'Device Communication' };
   if (p === '/settings/user-management') return { category: 'Settings', title: 'User Management' };
+  if (p === '/settings/report-configuration') return { category: 'Settings', title: 'Report Configuration' };
   if (p.startsWith('/report')) return { category: 'Analytics', title: 'Reports & Logs' };
   if (p === '/users') return { category: 'Administration', title: 'User Management' };
   return { category: 'System', title: 'Water Analysis' };
 };
 
 const TopNavbar: React.FC = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, userId, userName } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,7 +136,7 @@ const TopNavbar: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[8px] text-industrial-400 font-bold uppercase tracking-widest leading-none">User</span>
-                <span className="text-xs text-industrial-900 font-black uppercase tracking-wide leading-none mt-0.5">LOVIBOND</span>
+                <span className="text-xs text-industrial-900 font-black uppercase tracking-wide leading-none mt-0.5">{userName || userId || 'LOVIBOND'}</span>
               </div>
             </div>
 

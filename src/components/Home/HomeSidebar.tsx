@@ -15,7 +15,9 @@ import {
   Users,
   Database,
   FileSearch,
+  FileText,
 } from 'lucide-react';
+import { BRAND_LOGO_FALLBACK_URL, BRAND_LOGO_URL } from '../../constants/branding';
 
 const mainNavItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,6 +34,7 @@ const settingsSubItems = [
   { id: 'wifi', label: 'WiFi Configuration', to: '/settings/wifi', icon: Wifi },
   { id: 'user-management', label: 'User Management', to: '/settings/user-management', icon: Users },
   { id: 'sample-logs', label: 'Test Parameter', to: '/settings/sample-logs', icon: Database },
+  { id: 'report-configuration', label: 'Report Configuration', to: '/settings/report-configuration', icon: FileText },
 ];
 
 const bottomItems = [
@@ -118,8 +121,22 @@ const HomeSidebar: React.FC<HomeSidebarProps> = ({ activeSection, onSelect, mobi
     <aside className={`flex h-full w-64 flex-col border-r border-industrial-200 bg-[#F8F9FC] ${mobile ? 'shadow-2xl' : ''}`}>
       <div className="flex items-center justify-between border-b border-industrial-100 px-5 py-5">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/25 shrink-0">
-            <FlaskConical size={22} />
+          <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm shadow-brand-600/25 shrink-0">
+            <span className="text-[10px] font-black leading-tight text-brand-700 text-center">GWSSB</span>
+            <img
+              src={BRAND_LOGO_URL}
+              alt="Gujarat Water Supply & Sewerage Board"
+              className="absolute h-11 w-11 rounded-xl bg-white object-contain"
+              onError={(event) => {
+                const image = event.currentTarget;
+                if (image.dataset.fallbackApplied) {
+                  image.style.display = 'none';
+                  return;
+                }
+                image.dataset.fallbackApplied = 'true';
+                image.src = BRAND_LOGO_FALLBACK_URL;
+              }}
+            />
           </div>
           <div>
             <h2 className="text-base font-black tracking-tight text-industrial-900 leading-tight">Lovibond</h2>
@@ -146,8 +163,8 @@ const HomeSidebar: React.FC<HomeSidebarProps> = ({ activeSection, onSelect, mobi
               key={id}
               onClick={() => handleNavClick(id)}
               className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-sm font-semibold transition-all ${isActive
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
-                  : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
+                : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700'
                 }`}
             >
               <Icon size={18} className={isActive ? 'text-white' : 'text-industrial-400 group-hover:text-brand-600'} />
@@ -161,8 +178,8 @@ const HomeSidebar: React.FC<HomeSidebarProps> = ({ activeSection, onSelect, mobi
             type="button"
             onClick={handleToggleSettings}
             className={`group flex w-full items-center justify-between rounded-lg px-3.5 py-2.5 text-left text-sm font-semibold transition-all ${isSettingsRoute
-                ? 'bg-brand-50/70 text-brand-700 font-bold'
-                : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700'
+              ? 'bg-brand-50/70 text-brand-700 font-bold'
+              : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700'
               }`}
           >
             <div className="flex items-center gap-3">
@@ -203,8 +220,8 @@ const HomeSidebar: React.FC<HomeSidebarProps> = ({ activeSection, onSelect, mobi
                     type="button"
                     onClick={() => handleSubItemClick(to)}
                     className={`group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition-all ${isSubActive
-                        ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25'
-                        : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700 font-medium'
+                      ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25'
+                      : 'text-industrial-600 hover:bg-brand-50 hover:text-brand-700 font-medium'
                       }`}
                   >
                     <SubIcon

@@ -8,3 +8,5 @@ coverage/
 !.env.example
 .package_cache/
 *.zip
+/dev-server-cert.pem
+/dev-server-key.pem
